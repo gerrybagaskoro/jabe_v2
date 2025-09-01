@@ -1,24 +1,40 @@
+// ignore_for_file: avoid_print
+
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:jabe/api/endpoint.dart';
-import 'package:jabe/models/report.dart';
+import 'package:jabe/models/report.dart'; // Pastikan import ini benar
 import 'package:jabe/preference/shared_preference.dart';
 
 class ReportAPI {
   static Future<List<Report>> getReports() async {
-    final token = PreferenceHandler.getToken();
-    final url = Uri.parse(Endpoint.reports);
+    try {
+      final token = PreferenceHandler.getToken();
+      final url = Uri.parse(Endpoint.reports);
 
-    final response = await http.get(
-      url,
-      headers: {"Accept": "application/json", "Authorization": "Bearer $token"},
-    );
+      print('Mengambil laporan dari: $url');
+      print('Token: $token');
 
-    if (response.statusCode == 200) {
-      return reportListFromJson(response.body);
-    } else {
-      throw Exception('Gagal mengambil data laporan');
+      final response = await http.get(
+        url,
+        headers: {
+          "Accept": "application/json",
+          "Authorization": "Bearer $token",
+        },
+      );
+
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        return reportListFromJson(response.body);
+      } else {
+        throw Exception('Gagal mengambil data laporan: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error dalam getReports: $e');
+      rethrow;
     }
   }
 
@@ -39,9 +55,9 @@ class ReportAPI {
   }
 
   static Future<Report> createReport({
-    required String title,
-    required String description,
-    required String location,
+    required String judul,
+    required String isi,
+    required String lokasi,
     String? imagePath,
   }) async {
     final token = PreferenceHandler.getToken();
@@ -51,9 +67,9 @@ class ReportAPI {
     request.headers['Authorization'] = 'Bearer $token';
     request.headers['Accept'] = 'application/json';
 
-    request.fields['title'] = title;
-    request.fields['description'] = description;
-    request.fields['location'] = location;
+    request.fields['judul'] = judul;
+    request.fields['isi'] = isi;
+    request.fields['lokasi'] = lokasi;
 
     if (imagePath != null) {
       request.files.add(await http.MultipartFile.fromPath('image', imagePath));
@@ -61,6 +77,8 @@ class ReportAPI {
 
     final response = await request.send();
     final responseData = await response.stream.bytesToString();
+
+    print('Create report response: $responseData');
 
     if (response.statusCode == 201) {
       return reportFromJson(responseData);
@@ -73,9 +91,9 @@ class ReportAPI {
 
   static Future<Report> updateReport({
     required int id,
-    required String title,
-    required String description,
-    required String location,
+    required String judul,
+    required String isi,
+    required String lokasi,
     String? imagePath,
   }) async {
     final token = PreferenceHandler.getToken();
@@ -86,9 +104,9 @@ class ReportAPI {
     request.headers['Accept'] = 'application/json';
 
     request.fields['_method'] = 'PUT';
-    request.fields['title'] = title;
-    request.fields['description'] = description;
-    request.fields['location'] = location;
+    request.fields['judul'] = judul;
+    request.fields['isi'] = isi;
+    request.fields['lokasi'] = lokasi;
 
     if (imagePath != null) {
       request.files.add(await http.MultipartFile.fromPath('image', imagePath));
@@ -96,6 +114,8 @@ class ReportAPI {
 
     final response = await request.send();
     final responseData = await response.stream.bytesToString();
+
+    print('Update report response: $responseData');
 
     if (response.statusCode == 200) {
       return reportFromJson(responseData);

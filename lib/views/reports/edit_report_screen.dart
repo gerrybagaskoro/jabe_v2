@@ -50,11 +50,10 @@ class _EditReportScreenState extends State<EditReportScreen> {
     });
 
     try {
-      await ReportAPI.updateReport(
-        id: widget.report.id!,
-        title: _titleController.text,
-        description: _descriptionController.text,
-        location: _locationController.text,
+      await ReportAPI.createReport(
+        judul: _titleController.text, // Ganti ini
+        isi: _descriptionController.text, // Ganti ini
+        lokasi: _locationController.text, // Ganti ini
         imagePath: _imageFile?.path,
       );
 

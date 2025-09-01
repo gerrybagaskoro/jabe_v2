@@ -42,9 +42,9 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
 
     try {
       await ReportAPI.createReport(
-        title: _titleController.text,
-        description: _descriptionController.text,
-        location: _locationController.text,
+        judul: _titleController.text, // Ganti ini
+        isi: _descriptionController.text, // Ganti ini
+        lokasi: _locationController.text, // Ganti ini
         imagePath: _imageFile?.path,
       );
 

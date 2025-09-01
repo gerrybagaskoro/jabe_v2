@@ -6,10 +6,12 @@ class Endpoint {
   static String get login => "$baseUrl/login";
   static String get logout => "$baseUrl/logout";
 
-  // Report endpoints
-  static String get reports => "$baseUrl/reports";
-  static String getReportById(int id) => "$baseUrl/reports/$id";
-  static String updateReport(int id) => "$baseUrl/reports/$id";
-  static String deleteReport(int id) => "$baseUrl/reports/$id";
+  // Report endpoints - PERBAIKI: ganti reports menjadi iaporan
+  static String get reports => "$baseUrl/laporan";
+  static String getReportById(int id) => "$baseUrl/laporan/$id";
+  static String updateReport(int id) => "$baseUrl/laporan/$id";
+  static String deleteReport(int id) => "$baseUrl/laporan/$id";
+
+  // Statistik endpoint
   static String get reportStatistics => "$baseUrl/statistik";
 }

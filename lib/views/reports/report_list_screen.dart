@@ -61,15 +61,22 @@ class _ReportListScreenState extends State<ReportListScreen> {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       child: ListTile(
-        leading: const Icon(Icons.report, size: 40),
+        leading: report.imageUrl != null
+            ? Image.network(
+                report.imageUrl!,
+                width: 40,
+                height: 40,
+                fit: BoxFit.cover,
+              )
+            : const Icon(Icons.report, size: 40),
         title: Text(
-          report.title ?? 'No Title',
+          report.judul ?? 'No Title',
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(report.location ?? 'No Location'),
+            Text(report.lokasi ?? 'No Location'),
             const SizedBox(height: 4),
             Text(
               report.status ?? 'No Status',

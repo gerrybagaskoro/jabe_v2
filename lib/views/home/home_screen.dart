@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:jabe/api/report_api.dart';
-import 'package:jabe/models/report.dart';
+import 'package:jabe/models/report.dart'; // Pastikan import ini benar
 import 'package:jabe/preference/shared_preference.dart';
 import 'package:jabe/views/reports/create_report_screen.dart';
 import 'package:jabe/views/reports/report_list_screen.dart';
