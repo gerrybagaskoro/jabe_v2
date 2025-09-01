@@ -26,14 +26,21 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
 
   Future<void> _loadReport() async {
     try {
+      print('=== Loading report with ID: ${widget.reportId} ===');
       final report = await ReportAPI.getReportById(widget.reportId);
+      print('Report loaded successfully: ${report.judul}');
+
       setState(() {
         _report = report;
         _isLoading = false;
       });
     } catch (e) {
+      print('Error loading report detail: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal memuat detail laporan: $e')),
+        SnackBar(
+          content: Text('Gagal memuat detail laporan: $e'),
+          duration: const Duration(seconds: 5),
+        ),
       );
       setState(() {
         _isLoading = false;

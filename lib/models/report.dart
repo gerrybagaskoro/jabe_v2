@@ -7,11 +7,29 @@ import 'dart:convert';
 List<Report> reportListFromJson(String str) =>
     List<Report>.from(json.decode(str)["data"].map((x) => Report.fromJson(x)));
 
-Report reportFromJson(String str) => Report.fromJson(json.decode(str)["data"]);
+Report reportFromJson(String str) {
+  try {
+    final jsonData = json.decode(str);
+    print('Parsing report from JSON: $jsonData');
+
+    // Cek jika response memiliki structure {message, data}
+    if (jsonData is Map<String, dynamic> && jsonData.containsKey('data')) {
+      return Report.fromJson(jsonData["data"]);
+    }
+    // Jika langsung object report
+    else if (jsonData is Map<String, dynamic>) {
+      return Report.fromJson(jsonData);
+    } else {
+      throw Exception('Format response tidak dikenali');
+    }
+  } catch (e) {
+    print('Error parsing report: $e');
+    rethrow;
+  }
+}
 
 String reportToJson(Report data) => json.encode(data.toJson());
 
-// Tambahkan class ReportStatistics
 class ReportStatistics {
   int masuk;
   int proses;

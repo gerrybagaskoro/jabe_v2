@@ -4,16 +4,63 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:jabe/api/endpoint.dart';
-import 'package:jabe/models/report.dart'; // Pastikan import ini benar
+import 'package:jabe/models/report.dart';
 import 'package:jabe/preference/shared_preference.dart';
 
 class ReportAPI {
   static Future<List<Report>> getReports() async {
     try {
       final token = PreferenceHandler.getToken();
+      if (token == null || token.isEmpty) {
+        throw Exception('Token tidak valid, silakan login kembali');
+      }
       final url = Uri.parse(Endpoint.reports);
 
-      print('Mengambil laporan dari: $url');
+      print('=== DEBUG: Mengambil laporan ===');
+      print('URL: $url');
+      print('Token: $token');
+
+      final response = await http.get(
+        url,
+        headers: {
+          "Accept": "application/json",
+          "Authorization": "Bearer $token",
+        },
+      );
+
+      print('Response status: ${response.statusCode}');
+      print('Response headers: ${response.headers}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final jsonResponse = json.decode(response.body);
+        print('JSON Response: $jsonResponse');
+
+        if (jsonResponse['data'] is List) {
+          final reports = reportListFromJson(response.body);
+          print('Berhasil memparsing ${reports.length} laporan');
+          return reports;
+        } else {
+          throw Exception('Format response tidak valid: data bukan array');
+        }
+      } else {
+        throw Exception(
+          'Gagal mengambil data laporan: ${response.statusCode} - ${response.body}',
+        );
+      }
+    } catch (e) {
+      print('Error dalam getReports: $e');
+      rethrow;
+    }
+  }
+
+  static Future<Report> getReportById(int id) async {
+    try {
+      final token = PreferenceHandler.getToken();
+      final url = Uri.parse(Endpoint.getReportById(id));
+
+      print('=== DEBUG: Mengambil detail laporan ===');
+      print('URL: $url');
       print('Token: $token');
 
       final response = await http.get(
@@ -28,29 +75,18 @@ class ReportAPI {
       print('Response body: ${response.body}');
 
       if (response.statusCode == 200) {
-        return reportListFromJson(response.body);
+        final jsonResponse = json.decode(response.body);
+        print('JSON Response: $jsonResponse');
+
+        return reportFromJson(response.body);
       } else {
-        throw Exception('Gagal mengambil data laporan: ${response.statusCode}');
+        throw Exception(
+          'Gagal mengambil detail laporan: ${response.statusCode} - ${response.body}',
+        );
       }
     } catch (e) {
-      print('Error dalam getReports: $e');
+      print('Error dalam getReportById: $e');
       rethrow;
-    }
-  }
-
-  static Future<Report> getReportById(int id) async {
-    final token = PreferenceHandler.getToken();
-    final url = Uri.parse(Endpoint.getReportById(id));
-
-    final response = await http.get(
-      url,
-      headers: {"Accept": "application/json", "Authorization": "Bearer $token"},
-    );
-
-    if (response.statusCode == 200) {
-      return reportFromJson(response.body);
-    } else {
-      throw Exception('Gagal mengambil detail laporan');
     }
   }
 
