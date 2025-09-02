@@ -1,8 +1,13 @@
 // ignore_for_file: use_build_context_synchronously
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:jabe/api/endpoint.dart';
 import 'package:jabe/api/report_api.dart';
 import 'package:jabe/models/report.dart';
+import 'package:jabe/preference/shared_preference.dart';
 import 'package:jabe/views/reports/edit_report_screen.dart';
 
 class ReportDetailScreen extends StatefulWidget {
@@ -27,8 +32,10 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
   Future<void> _loadReport() async {
     try {
       print('=== Loading report with ID: ${widget.reportId} ===');
+
+      // Coba endpoint yang berbeda
       final report = await ReportAPI.getReportById(widget.reportId);
-      print('Report loaded successfully: ${report.judul}');
+      print('Report loaded successfully: ${report.toJson()}');
 
       setState(() {
         _report = report;
@@ -36,15 +43,69 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
       });
     } catch (e) {
       print('Error loading report detail: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Gagal memuat detail laporan: $e'),
-          duration: const Duration(seconds: 5),
-        ),
+
+      // Coba fallback ke endpoint riwayat
+      try {
+        print('Trying fallback to history endpoint...');
+        await _tryLoadFromHistory();
+      } catch (fallbackError) {
+        print('Fallback also failed: $fallbackError');
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal memuat detail laporan: $e'),
+            duration: const Duration(seconds: 5),
+          ),
+        );
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  // Method fallback untuk mencoba mengambil dari endpoint riwayat
+  Future<void> _tryLoadFromHistory() async {
+    try {
+      final token = PreferenceHandler.getToken();
+      final url = Uri.parse(Endpoint.reportHistory);
+
+      print('Trying history endpoint: $url');
+
+      final response = await http.get(
+        url,
+        headers: {
+          "Accept": "application/json",
+          "Authorization": "Bearer $token",
+        },
       );
-      setState(() {
-        _isLoading = false;
-      });
+
+      if (response.statusCode == 200) {
+        final jsonResponse = json.decode(response.body);
+        print('History response: $jsonResponse');
+
+        if (jsonResponse is Map<String, dynamic> &&
+            jsonResponse.containsKey('data') &&
+            jsonResponse['data'] is List) {
+          final reports = jsonResponse['data'] as List;
+          final foundReport = reports.firstWhere(
+            (report) => report['id'] == widget.reportId,
+            orElse: () => null,
+          );
+
+          if (foundReport != null) {
+            setState(() {
+              _report = Report.fromJson(foundReport);
+              _isLoading = false;
+            });
+            return;
+          }
+        }
+      }
+
+      throw Exception('Laporan tidak ditemukan dalam riwayat');
+    } catch (e) {
+      rethrow;
     }
   }
 

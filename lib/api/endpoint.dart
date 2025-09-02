@@ -6,7 +6,7 @@ class Endpoint {
   static String get login => "$baseUrl/login";
   static String get logout => "$baseUrl/logout";
 
-  // Report endpoints - PERBAIKI: ganti reports menjadi iaporan
+  // Report endpoints
   static String get reports => "$baseUrl/laporan";
   static String getReportById(int id) => "$baseUrl/laporan/$id";
   static String updateReport(int id) => "$baseUrl/laporan/$id";
@@ -14,4 +14,7 @@ class Endpoint {
 
   // Statistik endpoint
   static String get reportStatistics => "$baseUrl/statistik";
+
+  // Tambahkan endpoint untuk riwayat laporan
+  static String get reportHistory => "$baseUrl/riwayat";
 }

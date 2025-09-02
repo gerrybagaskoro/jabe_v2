@@ -27,11 +27,11 @@ class _LoginScreen02State extends State<LoginScreen02> {
   }
 
   Future<void> _checkLoginStatus() async {
-    final isLoggedIn = await PreferenceHandler.getLogin();
+    final isLoggedIn = PreferenceHandler.getLogin();
     if (isLoggedIn == true) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
+        MaterialPageRoute(builder: (context) => const DashboardScreen()),
       );
     }
   }
@@ -60,7 +60,7 @@ class _LoginScreen02State extends State<LoginScreen02> {
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
+        MaterialPageRoute(builder: (context) => const DashboardScreen()),
       );
     } catch (e) {
       ScaffoldMessenger.of(

@@ -78,7 +78,18 @@ class ReportAPI {
         final jsonResponse = json.decode(response.body);
         print('JSON Response: $jsonResponse');
 
-        return reportFromJson(response.body);
+        // Handle berbagai format response
+        if (jsonResponse is Map<String, dynamic>) {
+          if (jsonResponse.containsKey('data')) {
+            // Jika response memiliki format {message: "...", data: {...}}
+            return Report.fromJson(jsonResponse['data']);
+          } else {
+            // Jika response langsung object report
+            return Report.fromJson(jsonResponse);
+          }
+        } else {
+          throw Exception('Format response tidak valid');
+        }
       } else {
         throw Exception(
           'Gagal mengambil detail laporan: ${response.statusCode} - ${response.body}',

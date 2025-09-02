@@ -79,22 +79,45 @@ class Report {
 
   factory Report.fromJson(Map<String, dynamic> json) => Report(
     id: json["id"],
-    judul: json["judul"],
-    isi: json["isi"],
-    lokasi: json["lokasi"],
+    judul: json["judul"] ?? json["title"], // Support both "judul" and "title"
+    isi:
+        json["isi"] ??
+        json["description"] ??
+        json["content"], // Multiple possible fields
+    lokasi:
+        json["lokasi"] ??
+        json["location"] ??
+        json["tempat"], // Multiple possible fields
     status: json["status"],
-    imageUrl: json["image_url"],
-    userId: json["user_id"] is String
-        ? int.tryParse(json["user_id"])
-        : json["user_id"],
-    createdAt: json["created_at"] == null
-        ? null
-        : DateTime.parse(json["created_at"]),
-    updatedAt: json["updated_at"] == null
-        ? null
-        : DateTime.parse(json["updated_at"]),
+    imageUrl: json["image_url"] ?? json["imageUrl"] ?? json["image_path"],
+    userId: _parseUserId(json["user_id"] ?? json["userId"]),
+    createdAt: _parseDateTime(json["created_at"] ?? json["createdAt"]),
+    updatedAt: _parseDateTime(json["updated_at"] ?? json["updatedAt"]),
     user: json["user"] == null ? null : User.fromJson(json["user"]),
   );
+
+  // Helper method untuk parse user_id
+  static int? _parseUserId(dynamic userId) {
+    if (userId == null) return null;
+    if (userId is int) return userId;
+    if (userId is String) return int.tryParse(userId);
+    return null;
+  }
+
+  // Helper method untuk parse datetime
+  static DateTime? _parseDateTime(dynamic dateString) {
+    if (dateString == null) return null;
+    if (dateString is DateTime) return dateString;
+    if (dateString is String) {
+      try {
+        return DateTime.parse(dateString);
+      } catch (e) {
+        print('Error parsing date: $dateString');
+        return null;
+      }
+    }
+    return null;
+  }
 
   Map<String, dynamic> toJson() => {
     "id": id,
