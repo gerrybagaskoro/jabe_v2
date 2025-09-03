@@ -24,40 +24,23 @@ class PreferenceHandler {
     return _prefs!;
   }
 
-  // Method untuk menyimpan data login
+  // === LOGIN & TOKEN ===
   static Future<void> saveLogin() async {
     await _getPrefs().setBool(loginKey, true);
+  }
+
+  static bool? getLogin() {
+    return _getPrefs().getBool(loginKey);
   }
 
   static Future<void> saveToken(String token) async {
     await _getPrefs().setString(tokenKey, token);
   }
 
-  // Method untuk menyimpan data user
-  static Future<void> saveUserData(String name, String email) async {
-    await _getPrefs().setString(userNameKey, name);
-    await _getPrefs().setString(userEmailKey, email);
-  }
-
-  // Method untuk mengambil data
-  static bool? getLogin() {
-    return _getPrefs().getBool(loginKey);
-  }
-
   static String? getToken() {
     return _getPrefs().getString(tokenKey);
   }
 
-  // Tambahkan method getUserName
-  static String? getUserName() {
-    return _getPrefs().getString(userNameKey);
-  }
-
-  static String? getUserEmail() {
-    return _getPrefs().getString(userEmailKey);
-  }
-
-  // Method untuk menghapus data
   static Future<void> removeLogin() async {
     await _getPrefs().remove(loginKey);
   }
@@ -66,19 +49,42 @@ class PreferenceHandler {
     await _getPrefs().remove(tokenKey);
   }
 
-  // Tambahkan method removeUserData
+  // === USER DATA ===
+  static Future<void> saveUserData(String name, String email) async {
+    await _getPrefs().setString(userNameKey, name);
+    await _getPrefs().setString(userEmailKey, email);
+  }
+
+  static String? getUserName() {
+    return _getPrefs().getString(userNameKey);
+  }
+
+  static String? getUserEmail() {
+    return _getPrefs().getString(userEmailKey);
+  }
+
   static Future<void> removeUserData() async {
     await _getPrefs().remove(userNameKey);
     await _getPrefs().remove(userEmailKey);
   }
 
-  // Method untuk menandai welcome screen sudah ditampilkan
+  // === WELCOME SCREEN ===
   static Future<void> setWelcomeShown() async {
     await _getPrefs().setBool(welcomeShownKey, true);
   }
 
-  // Method untuk mengecek apakah welcome screen sudah ditampilkan
   static bool? isWelcomeShown() {
     return _getPrefs().getBool(welcomeShownKey);
+  }
+
+  static Future<void> removeWelcomeShown() async {
+    await _getPrefs().remove(welcomeShownKey);
+  }
+
+  // === LOGOUT COMPLETE ===
+  static Future<void> logout() async {
+    await removeLogin();
+    await removeToken();
+    await removeUserData();
   }
 }
