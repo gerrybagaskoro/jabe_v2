@@ -105,34 +105,41 @@ class ReportAPI {
     required String judul,
     required String isi,
     required String lokasi,
-    String? imagePath,
+    required String imageBase64,
   }) async {
-    final token = PreferenceHandler.getToken();
-    final url = Uri.parse(Endpoint.reports);
+    try {
+      final token = PreferenceHandler.getToken();
+      final url = Uri.parse(Endpoint.reports);
 
-    var request = http.MultipartRequest('POST', url);
-    request.headers['Authorization'] = 'Bearer $token';
-    request.headers['Accept'] = 'application/json';
+      print('Mengirim laporan dengan gambar base64');
 
-    request.fields['judul'] = judul;
-    request.fields['isi'] = isi;
-    request.fields['lokasi'] = lokasi;
-
-    if (imagePath != null) {
-      request.files.add(await http.MultipartFile.fromPath('image', imagePath));
-    }
-
-    final response = await request.send();
-    final responseData = await response.stream.bytesToString();
-
-    print('Create report response: $responseData');
-
-    if (response.statusCode == 201) {
-      return reportFromJson(responseData);
-    } else {
-      throw Exception(
-        'Gagal membuat laporan: ${json.decode(responseData)['message']}',
+      final response = await http.post(
+        url,
+        headers: {
+          "Accept": "application/json",
+          "Authorization": "Bearer $token",
+          "Content-Type": "application/json",
+        },
+        body: json.encode({
+          "judul": judul,
+          "isi": isi,
+          "lokasi": lokasi,
+          "image_base64": imageBase64,
+        }),
       );
+
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 201) {
+        return reportFromJson(response.body);
+      } else {
+        final error = json.decode(response.body);
+        throw Exception(error["message"] ?? "Gagal membuat laporan");
+      }
+    } catch (e) {
+      print('Error dalam createReport: $e');
+      rethrow;
     }
   }
 
@@ -141,35 +148,42 @@ class ReportAPI {
     required String judul,
     required String isi,
     required String lokasi,
-    String? imagePath,
+    String? imageBase64,
   }) async {
-    final token = PreferenceHandler.getToken();
-    final url = Uri.parse(Endpoint.updateReport(id));
+    try {
+      final token = PreferenceHandler.getToken();
+      final url = Uri.parse(Endpoint.updateReport(id));
 
-    var request = http.MultipartRequest('POST', url);
-    request.headers['Authorization'] = 'Bearer $token';
-    request.headers['Accept'] = 'application/json';
+      final Map<String, dynamic> body = {
+        "judul": judul,
+        "isi": isi,
+        "lokasi": lokasi,
+        "_method": "PUT",
+      };
 
-    request.fields['_method'] = 'PUT';
-    request.fields['judul'] = judul;
-    request.fields['isi'] = isi;
-    request.fields['lokasi'] = lokasi;
+      if (imageBase64 != null) {
+        body["image_base64"] = imageBase64;
+      }
 
-    if (imagePath != null) {
-      request.files.add(await http.MultipartFile.fromPath('image', imagePath));
-    }
-
-    final response = await request.send();
-    final responseData = await response.stream.bytesToString();
-
-    print('Update report response: $responseData');
-
-    if (response.statusCode == 200) {
-      return reportFromJson(responseData);
-    } else {
-      throw Exception(
-        'Gagal mengupdate laporan: ${json.decode(responseData)['message']}',
+      final response = await http.post(
+        url,
+        headers: {
+          "Accept": "application/json",
+          "Authorization": "Bearer $token",
+          "Content-Type": "application/json",
+        },
+        body: json.encode(body),
       );
+
+      if (response.statusCode == 200) {
+        return reportFromJson(response.body);
+      } else {
+        final error = json.decode(response.body);
+        throw Exception(error["message"] ?? "Gagal mengupdate laporan");
+      }
+    } catch (e) {
+      print('Error dalam updateReport: $e');
+      rethrow;
     }
   }
 

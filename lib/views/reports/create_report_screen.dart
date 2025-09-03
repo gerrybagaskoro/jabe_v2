@@ -1,10 +1,8 @@
-// ignore_for_file: use_build_context_synchronously
-
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:jabe/api/report_api.dart';
+import 'package:jabe/services/image_service.dart';
 
 class CreateReportScreen extends StatefulWidget {
   const CreateReportScreen({super.key});
@@ -20,21 +18,43 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
   final _locationController = TextEditingController();
 
   File? _imageFile;
+  String? _base64Image;
   bool _isLoading = false;
 
   Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    try {
+      final imageFile = await ImageService.pickImageFromGallery();
+      if (imageFile != null) {
+        // Convert image to base64
+        final base64String = await ImageService.imageToBase64(imageFile);
 
-    if (pickedFile != null) {
-      setState(() {
-        _imageFile = File(pickedFile.path);
-      });
+        if (base64String != null) {
+          setState(() {
+            _imageFile = imageFile;
+            _base64Image = base64String;
+          });
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Gagal memproses gambar')),
+          );
+        }
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 
   Future<void> _submitReport() async {
     if (!_formKey.currentState!.validate()) return;
+
+    if (_base64Image == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Silakan pilih gambar terlebih dahulu')),
+      );
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -42,10 +62,10 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
 
     try {
       await ReportAPI.createReport(
-        judul: _titleController.text, // Ganti ini
-        isi: _descriptionController.text, // Ganti ini
-        lokasi: _locationController.text, // Ganti ini
-        imagePath: _imageFile?.path,
+        judul: _titleController.text,
+        isi: _descriptionController.text,
+        lokasi: _locationController.text,
+        imageBase64: _base64Image!, // Kirim base64 ke API
       );
 
       ScaffoldMessenger.of(
@@ -88,6 +108,7 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                 },
               ),
               const SizedBox(height: 16),
+
               TextFormField(
                 controller: _descriptionController,
                 decoration: const InputDecoration(
@@ -103,6 +124,7 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                 },
               ),
               const SizedBox(height: 16),
+
               TextFormField(
                 controller: _locationController,
                 decoration: const InputDecoration(
@@ -117,16 +139,35 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                 },
               ),
               const SizedBox(height: 16),
-              _imageFile != null
-                  ? Image.file(_imageFile!, height: 200)
-                  : Container(),
+
+              // Tampilkan gambar yang dipilih
+              if (_imageFile != null)
+                Column(
+                  children: [
+                    Image.file(
+                      _imageFile!,
+                      height: 200,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Gambar siap diupload (${_imageFile!.lengthSync() ~/ 1024} KB)',
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ],
+                ),
+
               const SizedBox(height: 16),
+
               ElevatedButton.icon(
                 onPressed: _pickImage,
                 icon: const Icon(Icons.camera_alt),
-                label: const Text('Pilih Gambar'),
+                label: const Text('Pilih Gambar dari Galeri'),
               ),
+
               const SizedBox(height: 24),
+
               _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : ElevatedButton(

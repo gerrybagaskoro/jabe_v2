@@ -1,9 +1,9 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:jabe/api/report_api.dart';
 import 'package:jabe/models/report.dart';
+import 'package:jabe/services/image_service.dart';
 
 class EditReportScreen extends StatefulWidget {
   final Report report;
@@ -21,6 +21,7 @@ class _EditReportScreenState extends State<EditReportScreen> {
   final _locationController = TextEditingController();
 
   File? _imageFile;
+  String? _base64Image;
   bool _isLoading = false;
 
   @override
@@ -32,13 +33,27 @@ class _EditReportScreenState extends State<EditReportScreen> {
   }
 
   Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    try {
+      final imageFile = await ImageService.pickImageFromGallery();
+      if (imageFile != null) {
+        // Convert image to base64
+        final base64String = await ImageService.imageToBase64(imageFile);
 
-    if (pickedFile != null) {
-      setState(() {
-        _imageFile = File(pickedFile.path);
-      });
+        if (base64String != null) {
+          setState(() {
+            _imageFile = imageFile;
+            _base64Image = base64String;
+          });
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Gagal memproses gambar')),
+          );
+        }
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 
@@ -51,21 +66,21 @@ class _EditReportScreenState extends State<EditReportScreen> {
 
     try {
       await ReportAPI.createReport(
-        judul: _titleController.text, // Ganti ini
-        isi: _descriptionController.text, // Ganti ini
-        lokasi: _locationController.text, // Ganti ini
-        imagePath: _imageFile?.path,
+        judul: _titleController.text,
+        isi: _descriptionController.text,
+        lokasi: _locationController.text,
+        imageBase64: _base64Image!, // Kirim base64 ke API
       );
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Laporan berhasil diperbarui')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Laporan berhasil dibuat')));
 
       Navigator.pop(context);
     } catch (e) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Gagal memperbarui laporan: $e')));
+      ).showSnackBar(SnackBar(content: Text('Gagal membuat laporan: $e')));
     } finally {
       setState(() {
         _isLoading = false;
