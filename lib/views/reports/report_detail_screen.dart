@@ -22,6 +22,8 @@ class ReportDetailScreen extends StatefulWidget {
 class _ReportDetailScreenState extends State<ReportDetailScreen> {
   Report? _report;
   bool _isLoading = true;
+  bool _imageLoading = false;
+  bool _imageError = false;
 
   @override
   void initState() {
@@ -33,7 +35,6 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     try {
       print('=== Loading report with ID: ${widget.reportId} ===');
 
-      // Coba endpoint yang berbeda
       final report = await ReportAPI.getReportById(widget.reportId);
       print('Report loaded successfully: ${report.toJson()}');
 
@@ -44,7 +45,6 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     } catch (e) {
       print('Error loading report detail: $e');
 
-      // Coba fallback ke endpoint riwayat
       try {
         print('Trying fallback to history endpoint...');
         await _tryLoadFromHistory();
@@ -64,7 +64,6 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     }
   }
 
-  // Method fallback untuk mencoba mengambil dari endpoint riwayat
   Future<void> _tryLoadFromHistory() async {
     try {
       final token = PreferenceHandler.getToken();
@@ -143,97 +142,287 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     }
   }
 
+  bool get _hasValidImage {
+    return _report?.imageUrl != null && _report!.imageUrl!.isNotEmpty;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Detail Laporan'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => EditReportScreen(report: _report!),
+        actions: _report != null
+            ? [
+                IconButton(
+                  icon: const Icon(Icons.edit),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            EditReportScreen(report: _report!),
+                      ),
+                    ).then((_) => _loadReport());
+                  },
                 ),
-              ).then((_) => _loadReport());
-            },
-          ),
-          IconButton(icon: const Icon(Icons.delete), onPressed: _deleteReport),
-        ],
+                IconButton(
+                  icon: const Icon(Icons.delete),
+                  onPressed: _deleteReport,
+                ),
+              ]
+            : null,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _report == null
           ? const Center(child: Text('Laporan tidak ditemukan'))
-          : Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: ListView(
-                children: [
-                  Text(
-                    _report!.title ?? 'No Title',
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _report!.imageUrl != null
-                      ? Image.network(_report!.imageUrl!)
-                      : Container(),
-                  const SizedBox(height: 16),
-                  Text(
-                    _report!.description ?? 'No Description',
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      const Icon(Icons.location_on, size: 16),
-                      const SizedBox(width: 8),
-                      Text(_report!.location ?? 'No Location'),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(Icons.calendar_today, size: 16),
-                      const SizedBox(width: 8),
-                      Text(
-                        _report!.createdAt != null
-                            ? 'Dibuat: ${_report!.createdAt!.toString().split(' ')[0]}'
-                            : 'No Date',
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(Icons.info, size: 16),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Status: ${_report!.status ?? 'No Status'}',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: _getStatusColor(_report!.status),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+          : _buildReportDetails(),
     );
+  }
+
+  Widget _buildReportDetails() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: ListView(
+        children: [
+          // Judul Laporan
+          Text(
+            _report?.judul ?? _report?.title ?? 'Tidak Ada Judul',
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+
+          // Gambar
+          if (_hasValidImage) _buildImageSection(),
+
+          // Deskripsi
+          if (_report?.isi != null && _report!.isi!.isNotEmpty)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Deskripsi:',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                Text(_report!.isi!, style: const TextStyle(fontSize: 16)),
+                const SizedBox(height: 16),
+              ],
+            ),
+
+          // Informasi Laporan
+          _buildInfoSection(),
+
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildImageSection() {
+    return Column(
+      children: [
+        Container(
+          height: 250,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: Colors.grey[200],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.network(
+              _report!.imageUrl!,
+              fit: BoxFit.cover,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) {
+                      setState(() {
+                        _imageLoading = false;
+                        _imageError = false;
+                      });
+                    }
+                  });
+                  return child;
+                }
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) {
+                    setState(() {
+                      _imageLoading = true;
+                    });
+                  }
+                });
+                return Center(
+                  child: CircularProgressIndicator(
+                    value: loadingProgress.expectedTotalBytes != null
+                        ? loadingProgress.cumulativeBytesLoaded /
+                              loadingProgress.expectedTotalBytes!
+                        : null,
+                  ),
+                );
+              },
+              errorBuilder: (context, error, stackTrace) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) {
+                    setState(() {
+                      _imageLoading = false;
+                      _imageError = true;
+                    });
+                  }
+                });
+                return _buildErrorImage();
+              },
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Status loading/error image
+        if (_imageLoading)
+          const Text(
+            'Memuat gambar...',
+            style: TextStyle(color: Colors.grey, fontSize: 12),
+          ),
+        if (_imageError)
+          Text(
+            'Gambar tidak dapat dimuat',
+            style: TextStyle(color: Colors.red[600], fontSize: 12),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildErrorImage() {
+    return Container(
+      color: Colors.grey[200],
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.broken_image, size: 50, color: Colors.grey),
+          const SizedBox(height: 8),
+          const Text(
+            'Gambar tidak dapat dimuat',
+            style: TextStyle(color: Colors.grey),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'URL: ${_report!.imageUrl}',
+            style: const TextStyle(fontSize: 10, color: Colors.grey),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Informasi Laporan',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          const SizedBox(height: 12),
+
+          // Lokasi
+          if (_report?.lokasi != null && _report!.lokasi!.isNotEmpty)
+            _buildInfoRow(
+              icon: Icons.location_on,
+              label: 'Lokasi',
+              value: _report!.lokasi!,
+            ),
+
+          // Tanggal Dibuat
+          if (_report?.createdAt != null)
+            _buildInfoRow(
+              icon: Icons.calendar_today,
+              label: 'Dibuat',
+              value: _formatDate(_report!.createdAt!),
+            ),
+
+          // Status
+          _buildInfoRow(
+            icon: Icons.info,
+            label: 'Status',
+            value: _report?.status ?? 'Tidak diketahui',
+            valueColor: _getStatusColor(_report?.status),
+            isStatus: true,
+          ),
+
+          // ID Laporan
+          _buildInfoRow(
+            icon: Icons.numbers,
+            label: 'ID Laporan',
+            value: widget.reportId.toString(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow({
+    required IconData icon,
+    required String label,
+    required String value,
+    Color? valueColor,
+    bool isStatus = false,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: Colors.grey[600]),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: isStatus ? FontWeight.bold : FontWeight.normal,
+                    color: valueColor ?? Colors.black,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
   }
 
   Color _getStatusColor(String? status) {
     switch (status?.toLowerCase()) {
       case 'pending':
+      case 'masuk':
         return Colors.orange;
       case 'processed':
+      case 'proses':
         return Colors.purple;
       case 'completed':
+      case 'selesai':
         return Colors.green;
       default:
         return Colors.grey;
