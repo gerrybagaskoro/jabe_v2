@@ -1,7 +1,8 @@
-// ignore_for_file: deprecated_member_use, use_build_context_synchronously
+// ignore_for_file: deprecated_member_use, use_build_context_synchronously, avoid_print
 
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
+import 'package:jabe/api/authentication.dart';
 import 'package:jabe/api/report_api.dart';
 import 'package:jabe/models/report.dart';
 import 'package:jabe/preference/shared_preference.dart';
@@ -190,12 +191,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
             icon: const Icon(Icons.notifications_none, color: Colors.white),
             onPressed: () {},
           ),
+          // IconButton(
+          //   icon: const Icon(Icons.logout, color: Colors.white),
+          //   onPressed: () async {
+          //     await PreferenceHandler.removeLogin();
+          //     await PreferenceHandler.removeToken();
+          //     await PreferenceHandler.removeUserData();
+          //     Navigator.pushReplacementNamed(context, '/login');
+          //   },
+          // ),
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.white),
             onPressed: () async {
-              await PreferenceHandler.removeLogin();
-              await PreferenceHandler.removeToken();
-              await PreferenceHandler.removeUserData();
+              // Logout dari API
+              try {
+                await AuthenticationAPI.logout();
+              } catch (e) {
+                print('Logout Berhasil: $e');
+              }
+
+              // Hapus data lokal
+              await PreferenceHandler.logout();
+
+              // Redirect ke login screen
               Navigator.pushReplacementNamed(context, '/login');
             },
           ),
