@@ -1,4 +1,4 @@
-// ignore_for_file: use_build_context_synchronously
+// ignore_for_file: use_build_context_synchronously, avoid_print
 
 import 'dart:convert';
 
@@ -12,8 +12,13 @@ import 'package:jabe/views/reports/edit_report_screen.dart';
 
 class ReportDetailScreen extends StatefulWidget {
   final int reportId;
+  final Report report;
 
-  const ReportDetailScreen({super.key, required this.reportId});
+  const ReportDetailScreen({
+    super.key,
+    required this.reportId,
+    required this.report,
+  });
 
   @override
   State<ReportDetailScreen> createState() => _ReportDetailScreenState();
@@ -28,7 +33,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _loadReport();
+    // _loadReport();
   }
 
   Future<void> _loadReport() async {
@@ -142,9 +147,14 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     }
   }
 
-  bool get _hasValidImage {
-    return _report?.imageUrl != null && _report!.imageUrl!.isNotEmpty;
-  }
+  // bool get _hasValidImage {
+  //   final imageUrl = _report?.imageUrl;
+  //   if (imageUrl == null || imageUrl.isEmpty) return false;
+
+  //   // Pastikan URL adalah URL absolut yang valid
+  //   final uri = Uri.tryParse(imageUrl);
+  //   return uri != null && (uri.scheme == 'http' || uri.scheme == 'https');
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -193,7 +203,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
           const SizedBox(height: 16),
 
           // Gambar
-          if (_hasValidImage) _buildImageSection(),
+          _buildImageSection(),
 
           // Deskripsi
           if (_report?.isi != null && _report!.isi!.isNotEmpty)
@@ -220,6 +230,12 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
   }
 
   Widget _buildImageSection() {
+    String imageUrl = widget.report.imageUrl!;
+
+    // Jika URL relatif, konversi ke absolut
+    // if (!imageUrl.startsWith('http')) {
+    //   imageUrl = 'http://applaporan.mobileprojp.com/storage/$imageUrl';
+    // }
     return Column(
       children: [
         Container(
@@ -232,8 +248,11 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: Image.network(
-              _report!.imageUrl!,
+              imageUrl,
               fit: BoxFit.cover,
+              headers: {
+                "Authorization": "Bearer ${PreferenceHandler.getToken() ?? ''}",
+              },
               loadingBuilder: (context, child, loadingProgress) {
                 if (loadingProgress == null) {
                   WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -263,6 +282,8 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                 );
               },
               errorBuilder: (context, error, stackTrace) {
+                print('Error loading image: $error');
+                print('Image URL: $imageUrl');
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   if (mounted) {
                     setState(() {
@@ -271,7 +292,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                     });
                   }
                 });
-                return _buildErrorImage();
+                return _buildErrorImage(imageUrl);
               },
             ),
           ),
@@ -293,7 +314,30 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     );
   }
 
-  Widget _buildErrorImage() {
+  // Widget _buildErrorImage() {
+  //   return Container(
+  //     color: Colors.grey[200],
+  //     child: Column(
+  //       mainAxisAlignment: MainAxisAlignment.center,
+  //       children: [
+  //         const Icon(Icons.broken_image, size: 50, color: Colors.grey),
+  //         const SizedBox(height: 8),
+  //         const Text(
+  //           'Gambar tidak dapat dimuat',
+  //           style: TextStyle(color: Colors.grey),
+  //         ),
+  //         const SizedBox(height: 4),
+  //         Text(
+  //           'URL: ${_report!.imageUrl}',
+  //           style: const TextStyle(fontSize: 10, color: Colors.grey),
+  //           overflow: TextOverflow.ellipsis,
+  //           maxLines: 1,
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
+  Widget _buildErrorImage(String imageUrl) {
     return Container(
       color: Colors.grey[200],
       child: Column(
@@ -311,6 +355,16 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
             style: const TextStyle(fontSize: 10, color: Colors.grey),
             overflow: TextOverflow.ellipsis,
             maxLines: 1,
+          ),
+          const SizedBox(height: 8),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                _imageError = false;
+                _imageLoading = true;
+              });
+            },
+            child: const Text('Coba Lagi'),
           ),
         ],
       ),

@@ -92,7 +92,8 @@ class _ReportListScreenState extends State<ReportListScreen> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => ReportDetailScreen(reportId: report.id!),
+              builder: (context) =>
+                  ReportDetailScreen(reportId: report.id!, report: report),
             ),
           ).then((_) => _loadReports());
         },

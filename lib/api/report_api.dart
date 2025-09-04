@@ -101,6 +101,7 @@ class ReportAPI {
     }
   }
 
+  // Dalam method createReport, pastikan response handling benar
   static Future<Report> createReport({
     required String judul,
     required String isi,
@@ -110,8 +111,6 @@ class ReportAPI {
     try {
       final token = PreferenceHandler.getToken();
       final url = Uri.parse(Endpoint.reports);
-
-      print('Mengirim laporan dengan gambar base64');
 
       final response = await http.post(
         url,
@@ -132,7 +131,16 @@ class ReportAPI {
       print('Response body: ${response.body}');
 
       if (response.statusCode == 201) {
-        return reportFromJson(response.body);
+        final jsonResponse = json.decode(response.body);
+
+        // Pastikan URL gambar absolut
+        final report = reportFromJson(response.body);
+        if (report.imageUrl != null && !report.imageUrl!.startsWith('http')) {
+          report.imageUrl =
+              'http://applaporan.mobileprojp.com/storage/${report.imageUrl}';
+        }
+
+        return report;
       } else {
         final error = json.decode(response.body);
         throw Exception(error["message"] ?? "Gagal membuat laporan");
